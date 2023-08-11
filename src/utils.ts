@@ -87,8 +87,7 @@ export const getHashes = async () => {
         const hash = await gen_hash(`${pakPath}/${pak}`)
 
         if (!hash) {
-          console.error(`Failed to hash ${pak}`)
-          process.exit(1)
+          showError(`Failed to hash ${pak}`)
         }
 
         bar.increment(1)
@@ -118,4 +117,13 @@ function gen_hash(fn: string): Promise<string> {
     })
     fh.on('error', reject)
   })
+}
+
+export const showError = (msg: string) => {
+  console.clear()
+  console.log(`${msg}\n\nPress any key to exit...`)
+
+  process.stdin.setRawMode(true)
+  process.stdin.resume()
+  process.stdin.on('data', process.exit.bind(process, 1))
 }
