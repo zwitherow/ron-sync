@@ -24,7 +24,12 @@ export const downloadPak = async (pak: ManifestPak) => {
     cliProgress.Presets.rect
   )
 
-  bar.start(0, 0, { filename: pak.filename })
+  bar.start(0, 0, {
+    filename: pak.filename,
+    remaining: '--',
+    original: '--',
+    speed: '0 B'
+  })
 
   const client = axios.create({
     timeout: 10000,
