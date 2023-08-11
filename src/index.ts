@@ -1,14 +1,14 @@
 import dotenv from 'dotenv'
-import { existsSync, unlinkSync, writeFileSync } from 'fs'
+import { existsSync, unlinkSync } from 'fs'
 import fetch from 'node-fetch'
-import { getHashes } from './utils.js'
+import { downloadPak, getHashes } from './utils.js'
 
 dotenv.config()
 
 const ronPath = process.env.RON_PATH
 const syncMaps = process.env.SYNC_MAPS?.toLowerCase() === 'true'
 
-const pakPath = `${ronPath}\\ReadyOrNot\\Content\\Paks`
+const pakPath = `${ronPath}/ReadyOrNot/Content/Paks`
 
 if (!existsSync(pakPath)) {
   console.error('Pak path does not exist')
@@ -16,7 +16,7 @@ if (!existsSync(pakPath)) {
 }
 
 console.log('\n\n\n')
-await main()
+main()
 
 async function main() {
   console.log('Downloading manifest...')
@@ -47,23 +47,18 @@ async function main() {
   if (paksToRemove.length > 0) {
     console.log('Removing old pak files...')
     for (const pak of paksToRemove) {
-      unlinkSync(`${pakPath}\\${pak.filename}`)
+      unlinkSync(`${pakPath}/${pak.filename}`)
     }
   }
 
   if (paksToInstall.length > 0) {
     console.log('Installing new pak files...')
     for (const pak of paksToInstall) {
-      console.log(`Downloading ${pak.filename}...`)
-      const req = await fetch(pak.url)
-
-      if (!req.ok) {
-        console.error(`Failed to download ${pak.filename}`)
-        continue
-      }
-
-      const arrayBuffer = await req.arrayBuffer()
-      writeFileSync(`${pakPath}\\${pak.filename}`, Buffer.from(arrayBuffer))
+      await downloadPak(pak)
     }
   }
+
+  console.log('\n\n')
+  console.log('Done!')
+  process.exit(0)
 }
