@@ -3,7 +3,13 @@ import cliProgress from 'cli-progress'
 import { createHash } from 'crypto'
 import dotenv from 'dotenv'
 import { filesize } from 'filesize'
-import { createReadStream, readdirSync, writeFileSync } from 'fs'
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  writeFileSync
+} from 'fs'
 import { defaultPaks } from './data/default-paks.js'
 
 dotenv.config()
@@ -87,7 +93,7 @@ export const getHashes = async () => {
         const hash = await gen_hash(`${pakPath}/${pak}`)
 
         if (!hash) {
-          showError(`Failed to hash ${pak}`)
+          handleError(`Failed to hash ${pak}`)
         }
 
         bar.increment(1)
@@ -119,11 +125,10 @@ function gen_hash(fn: string): Promise<string> {
   })
 }
 
-export const showError = (msg: string) => {
-  console.clear()
-  console.log(`${msg}\n\nPress any key to exit...`)
-
-  process.stdin.setRawMode(true)
-  process.stdin.resume()
-  process.stdin.on('data', process.exit.bind(process, 1))
+export const handleError = (msg: string) => {
+  if (!existsSync('./logs')) {
+    mkdirSync('./logs')
+  }
+  writeFileSync('./logs/error_log.txt', msg, { flag: 'a' })
+  process.exit(1)
 }

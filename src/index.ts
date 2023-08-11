@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import { existsSync, renameSync, unlinkSync } from 'fs'
 import fetch from 'node-fetch'
 import ora from 'ora'
-import { downloadPak, getHashes, showError } from './utils.js'
+import { downloadPak, getHashes, handleError } from './utils.js'
 
 dotenv.config()
 
@@ -12,7 +12,7 @@ const syncMaps = process.env.SYNC_MAPS?.toLowerCase() === 'true'
 const pakPath = `${ronPath}/ReadyOrNot/Content/Paks`
 
 if (!existsSync(pakPath)) {
-  showError('Pak path does not exist')
+  handleError('Pak path does not exist')
 }
 
 console.clear()
@@ -27,7 +27,7 @@ async function main() {
 
   if (!req.ok) {
     manifestSpinner.fail()
-    showError('Failed to download manifest')
+    handleError('Failed to download manifest')
   }
 
   manifestSpinner.succeed('Downloading manifest... Success!')
