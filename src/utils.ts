@@ -67,7 +67,7 @@ export const getHashes = async () => {
     cliProgress.Presets.rect
   )
 
-  const pakList = readdirSync(pakPath)
+  const pakList = readdirSync(pakPath).filter(fn => !defaultPaks.includes(fn))
 
   bar.start(pakList.length, 0, { filename: pakList[0] })
 
