@@ -9,7 +9,6 @@ import { defaultPaks } from './data/default-paks.js'
 dotenv.config()
 
 const ronPath = process.env.RON_PATH
-const syncMaps = process.env.SYNC_MAPS?.toLowerCase() === 'true'
 
 const pakPath = `${ronPath}/ReadyOrNot/Content/Paks`
 
@@ -17,16 +16,16 @@ export const downloadPak = async (pak: ManifestPak) => {
   const bar = new cliProgress.SingleBar(
     {
       format:
-        '{bar} | {filename} | {percentage}% | ETA: {eta_formatted} | {remaining} / {original} | {speed}',
+        '{bar} | {filename} | {percentage}% | {completed} / {original} | {speed} | ETA: {eta_formatted}',
       hideCursor: true,
       clearOnComplete: true
     },
     cliProgress.Presets.rect
   )
 
-  bar.start(0, 0, {
+  bar.start(1, 0, {
     filename: pak.filename,
-    remaining: '--',
+    completed: '--',
     original: '--',
     speed: '0 B'
   })
@@ -44,7 +43,7 @@ export const downloadPak = async (pak: ManifestPak) => {
 
       bar.setTotal(total)
       bar.update(loaded, {
-        remaining: filesize(total - loaded),
+        completed: filesize(loaded),
         original: filesize(total),
         speed: filesize(speed) + '/s'
       })
@@ -61,7 +60,7 @@ export const downloadPak = async (pak: ManifestPak) => {
 export const getHashes = async () => {
   const bar = new cliProgress.SingleBar(
     {
-      format: '{bar} | {percentage}% | {value}/{total} | Hashing pak files...',
+      format: '{bar} | {percentage}% | {value} / {total}',
       hideCursor: true,
       clearOnComplete: true
     },

@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import { existsSync, unlinkSync } from 'fs'
+import { existsSync, renameSync, unlinkSync } from 'fs'
 import fetch from 'node-fetch'
 import ora from 'ora'
 import { downloadPak, getHashes } from './utils.js'
@@ -44,6 +44,13 @@ async function main() {
     pak => !manifest.some(mPak => mPak.hash === pak.hash)
   )
 
+  const paksToRename = localPaks.filter(pak => {
+    const mPak = manifest.find(mPak => mPak.hash === pak.hash)
+    if (!mPak) return false
+
+    return pak.filename !== mPak.filename
+  })
+
   const paksToInstall = manifest.filter(mPak => {
     if (!syncMaps && mPak.url.includes('%2F' + 'maps' + '%2F')) {
       return false
@@ -59,6 +66,18 @@ async function main() {
       unlinkSync(`${pakPath}/${pak.filename}`)
     }
     removeSpinner.succeed('Removing old paks... Success!')
+  }
+
+  if (paksToRename.length > 0) {
+    console.clear()
+    const renameSpinner = ora('Renaming paks...').start()
+    for (const pak of paksToRename) {
+      const mPak = manifest.find(mPak => mPak.hash === pak.hash)
+      if (!mPak) continue
+
+      renameSync(`${pakPath}/${pak.filename}`, `${pakPath}/${mPak.filename}`)
+    }
+    renameSpinner.succeed('Renaming paks... Success!')
   }
 
   if (paksToInstall.length > 0) {
@@ -78,6 +97,19 @@ async function main() {
     console.log(
       `Removed ${paksToRemove.length} paks: \n${paksToRemove
         .map(pak => `- ${pak.filename}`)
+        .join('\n')}\n`
+    )
+  }
+
+  if (paksToRename.length) {
+    console.log(
+      `Renamed ${paksToRename.length} paks: \n${paksToRename
+        .map(pak => {
+          const mPak = manifest.find(mPak => mPak.hash === pak.hash)
+          if (!mPak) return ''
+
+          return `~ ${pak.filename} -> ${mPak.filename}`
+        })
         .join('\n')}\n`
     )
   }
