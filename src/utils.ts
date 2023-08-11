@@ -3,7 +3,7 @@ import cliProgress from 'cli-progress'
 import { createHash } from 'crypto'
 import dotenv from 'dotenv'
 import { filesize } from 'filesize'
-import { readFileSync, readdirSync, writeFileSync } from 'fs'
+import { createReadStream, readdirSync, writeFileSync } from 'fs'
 import { defaultPaks } from './data/default-paks.js'
 
 dotenv.config()
@@ -18,7 +18,8 @@ export const downloadPak = async (pak: ManifestPak) => {
     {
       format:
         '{bar} | {filename} | {percentage}% | ETA: {eta_formatted} | {remaining} / {original} | {speed}',
-      hideCursor: true
+      hideCursor: true,
+      clearOnComplete: true
     },
     cliProgress.Presets.rect
   )
@@ -52,37 +53,65 @@ export const downloadPak = async (pak: ManifestPak) => {
   writeFileSync(`${pakPath}/${pak.filename}`, Buffer.from(arrayBuffer))
 }
 
-export const getHashes = () => {
-  console.log('Hashing local pak files...')
-  const pakFiles = readdirSync(pakPath)
-    .filter(file => {
-      if (!file.toLowerCase().endsWith('.pak')) {
-        return null
-      }
-      if (defaultPaks.includes(file)) {
-        return null
-      }
-      return file
-    })
-    .filter(Boolean)
-    .map(pak => {
-      const hashFn = createHash('sha256')
-      hashFn.setEncoding('hex')
-      hashFn.write(readFileSync(`${pakPath}/${pak}`))
-      hashFn.end()
+export const getHashes = async () => {
+  const bar = new cliProgress.SingleBar(
+    {
+      format: '{bar} | {percentage}% | {value}/{total} | Hashing pak files...',
+      hideCursor: true,
+      clearOnComplete: true
+    },
+    cliProgress.Presets.rect
+  )
 
-      const hash = hashFn.read() as string
+  const pakList = readdirSync(pakPath)
 
-      if (!hash) {
-        console.error(`Failed to hash ${pak}`)
-        process.exit(1)
-      }
+  bar.start(pakList.length, 0, { filename: pakList[0] })
 
-      return {
-        filename: pak,
-        hash
-      }
-    })
+  const pakFiles = await Promise.all(
+    pakList
+      .filter(file => {
+        if (!file.toLowerCase().endsWith('.pak')) {
+          return null
+        }
+        if (defaultPaks.includes(file)) {
+          return null
+        }
+        return file
+      })
+      .filter(Boolean)
+      .map(async pak => {
+        const hash = await gen_hash(`${pakPath}/${pak}`)
+
+        if (!hash) {
+          console.error(`Failed to hash ${pak}`)
+          process.exit(1)
+        }
+
+        bar.increment(1)
+
+        return {
+          filename: pak,
+          hash
+        }
+      })
+  )
+
+  bar.update(pakList.length)
+  bar.stop()
 
   return pakFiles
+}
+
+function gen_hash(fn: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256')
+    const fh = createReadStream(fn)
+
+    fh.on('data', d => hash.update(d))
+    fh.on('end', () => {
+      const digest = hash.digest('hex')
+      resolve(digest)
+    })
+    fh.on('error', reject)
+  })
 }
